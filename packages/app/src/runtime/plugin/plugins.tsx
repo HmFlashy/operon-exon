@@ -1,9 +1,10 @@
-import { createMemo, onCleanup, untrack } from "solid-js"
+import { createEffect, createMemo, onCleanup, untrack } from "solid-js"
 import type { PluginOptions } from "@opencode/plugin/gui"
-import type { Bridge, BridgePluginGui, Entry } from "@opencode/plugin/gui/host"
+import { runsOn, type Bridge, type BridgePluginGui, type Entry } from "@opencode/plugin/gui/host"
 import type { OpenCodeClient } from "@opencode/client/promise"
 import { useGlobal } from "@/runtime/server/runtime"
-import { ServerConnection } from "@/runtime/server/registry"
+import { ServerConnection, useServers } from "@/runtime/server/registry"
+import { usePlatform } from "@/runtime/platform/platform"
 import { pluginDefinition } from "./module"
 import {
   createPluginGuiState,
@@ -36,11 +37,28 @@ export function PluginGuiLoader(props: {
   onChange: (plugins: readonly PluginGui[], reserved: readonly string[]) => void
 }) {
   const global = useGlobal()
+  const servers = useServers()
+  const platform = usePlatform()
 
+  // The desktop sidecar, or the server that served the web app.
   const controller = createMemo(() => {
-    const conn = global.servers.list().find(ServerConnection.builtin)
+    const list = global.servers.list()
+    const conn = list.find(ServerConnection.builtin) ?? list.find((item) => servers.current(item))
 
     return conn ? global.serverCtx(ServerConnection.key(conn)) : undefined
+  })
+
+  // The browser has no main process to list plugins, so the window lists them on that server with its own client.
+  const web = platform.platform === "web" ? platform.plugins : undefined
+
+  createEffect(() => {
+    const sdk = controller()?.sdk
+
+    if (!web || !sdk || sdk.connection.status() !== "connected") return
+    // A new attempt is a reconnect, which may have missed a `plugin.updated`.
+    sdk.connection.attempt()
+    web.refresh(sdk.api)
+    onCleanup(sdk.event.on("plugin.updated", () => web.refresh(sdk.api)))
   })
 
   // The server that runs the plugin, read each time: it is a new client after that server restarts.
@@ -107,7 +125,9 @@ export function PluginGuiLoader(props: {
 
     if (effect.type === "publish")
       return props.onChange(
-        effect.plugins.map((plugin) => ({ definition: plugin.definition, options: plugin.options, client })),
+        effect.plugins
+          .filter((plugin) => runsOn(plugin.definition, platform.os))
+          .map((plugin) => ({ definition: plugin.definition, options: plugin.options, client })),
         effect.reserved,
       )
 
