@@ -62,6 +62,8 @@ export function createSessionComposerController(input: {
   onMount(() => focus.dispatch({ type: "real.mounted", target: input.sessionID }))
   createEffect(() => {
     if (!needsRealComposerFocus(focus.state(), input.sessionID)) return
+    // Focusing the editor opens the on-screen keyboard, which would cover the session just opened by a tap.
+    if (window.matchMedia?.("(pointer: coarse)").matches) return
 
     if (!adapter.ready() || !editor() || !editable() || dialog.active) return
     const cursor = untrack(() => adapter.state.cursor() ?? promptLength(adapter.state.current()))
