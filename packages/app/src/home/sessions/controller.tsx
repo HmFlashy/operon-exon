@@ -271,6 +271,26 @@ export function createHomeSessionsController(home: HomeController) {
     onCleanup(() => controller.abort())
   })
 
+  // Sessions created or deleted outside this app (CLI, plugins, cascaded children) never touch the cached index.
+  createEffect(() => {
+    const ctx = home.server.focusedContext()
+    const conn = home.server.focused()
+
+    if (!ctx || !conn) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const refresh = () => {
+      clearTimeout(timer)
+      timer = setTimeout(
+        () => void queryClient.invalidateQueries({ queryKey: ["home-sessions", conn], exact: true }),
+        HOME_REFRESH_DEBOUNCE_MS,
+      )
+    }
+
+    onCleanup(ctx.sdk.event.on("session.created", refresh))
+    onCleanup(ctx.sdk.event.on("session.deleted", refresh))
+    onCleanup(() => clearTimeout(timer))
+  })
+
   const indexedSessions = createMemo(() => {
     const ctx = home.server.focusedContext()
     const conn = home.server.focused()
@@ -623,6 +643,7 @@ function directories(project: LocalProject) {
   return [project.worktree, ...(project.sandboxes ?? [])]
 }
 
+const HOME_REFRESH_DEBOUNCE_MS = 400
 const HOME_ROW_SELECTOR = '[data-component="home-session-row-container"]'
 
 function homeRowTops() {
