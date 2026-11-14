@@ -3,7 +3,7 @@ set -euo pipefail
 APP=exon
 LEGACY_APP=opencode
 SOURCE_APP=exon
-FORGE_REPO="HmFlashy/operon-forge"
+FORGE_REPO="HmFlashy/operon-exon"
 
 MUTED='\033[0;2m'
 RED='\033[0;31m'
@@ -23,7 +23,7 @@ Options:
         --no-modify-path    Don't modify shell config files (.zshrc, .bashrc, etc.)
 
 Examples:
-    curl -fsSL https://raw.githubusercontent.com/HmFlashy/operon-forge/chore/operon-forge-branding/install | bash
+    curl -fsSL https://raw.githubusercontent.com/HmFlashy/operon-exon/dev/install | bash
     ./install --binary /path/to/exon
 EOF
 }
@@ -421,7 +421,7 @@ EOF
     chmod 755 "$INSTALL_DIR/opencode2"
 
     # Also symlink / shim aliases to exon
-    for alias_name in "$LEGACY_APP" "operon-exon" "operon-forge"; do
+    for alias_name in "$LEGACY_APP" "operon-exon"; do
         ln -sf "$INSTALL_DIR/$APP" "$INSTALL_DIR/$alias_name" 2>/dev/null || {
             cat > "$INSTALL_DIR/$alias_name" <<'EOF'
 #!/bin/sh
