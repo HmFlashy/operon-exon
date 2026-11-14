@@ -59,7 +59,7 @@ export function AppBaseProviders(
     <MetaProvider>
       <Title>Operon Forge</Title>
       <Font />
-      <ThemeProvider onThemeApplied={(mode, scheme) => props.onThemeApplied?.(mode, scheme)}>
+      <ThemeProvider defaultTheme="operon" onThemeApplied={(mode, scheme) => props.onThemeApplied?.(mode, scheme)}>
         <LanguageProvider locale={props.locale} onNativeTranslations={props.onNativeTranslations}>
           <UiI18nBridge>
             <ErrorBoundary
