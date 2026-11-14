@@ -9,14 +9,9 @@ import { TruncatedText } from "@opencode/ui/truncated-text"
 import { useLanguage } from "@/runtime/i18n/language"
 import { useData } from "@/runtime/server/current"
 import { useServerSDK } from "@/runtime/server/client"
-<<<<<<< HEAD
-import { ServerConnection } from "@/runtime/server/registry"
+import { useServers } from "@/runtime/server/registry"
 import { useMcpController } from "@/providers/connect/mcp"
 import { mcpRowView } from "@/providers/connect/mcp-machine"
-=======
-import { useServers } from "@/runtime/server/registry"
-import { useMcpToggle } from "@/providers/connect/mcp"
->>>>>>> 8b4782c61e (feat(app): load plugin GUIs in the web app)
 import { DialogMcp } from "@/providers/connect/mcp-dialog"
 import { ExtensionPlugins } from "@/runtime/plugin/extension-plugins"
 import { ExternalLink } from "@/runtime/platform/external-link"
