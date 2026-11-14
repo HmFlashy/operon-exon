@@ -1,114 +1,64 @@
 <p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset=".github/assets/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset=".github/assets/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src=".github/assets/logo-ornate-light.svg" alt="Logo OpenCode">
-    </picture>
-  </a>
+  <picture>
+    <source srcset=".github/assets/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
+    <source srcset=".github/assets/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
+    <img src=".github/assets/logo-ornate-light.svg" alt="Logo Operon Exon">
+  </picture>
 </p>
-<p align="center">L'agent de codage IA open source.</p>
+<p align="center">L'agent de codage IA open source — Forké et adapté par Arkum Cloud.</p>
 <p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/@opencode/cli"><img alt="npm" src="https://img.shields.io/npm/v/@opencode/cli?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/release.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/release.yml?style=flat-square&branch=dev" /></a>
+  <a href="https://github.com/arkum-cloud/operon-exon"><img alt="Dépôt GitHub" src="https://img.shields.io/badge/github-arkum--cloud%2Foperon--exon-blue?style=flat-square" /></a>
+  <a href="https://github.com/arkum-cloud/operon-exon/releases"><img alt="Release" src="https://img.shields.io/github/v/release/arkum-cloud/operon-exon?style=flat-square&color=orange" /></a>
 </p>
 
 <p align="center">
   <a href="README.md">English</a> |
-  <a href="README.zh.md">简体中文</a> |
-  <a href="README.zht.md">繁體中文</a> |
-  <a href="README.ko.md">한국어</a> |
-  <a href="README.de.md">Deutsch</a> |
-  <a href="README.es.md">Español</a> |
-  <a href="README.fr.md">Français</a> |
-  <a href="README.it.md">Italiano</a> |
-  <a href="README.da.md">Dansk</a> |
-  <a href="README.ja.md">日本語</a> |
-  <a href="README.pl.md">Polski</a> |
-  <a href="README.ru.md">Русский</a> |
-  <a href="README.bs.md">Bosanski</a> |
-  <a href="README.ar.md">العربية</a> |
-  <a href="README.no.md">Norsk</a> |
-  <a href="README.br.md">Português (Brasil)</a> |
-  <a href="README.th.md">ไทย</a> |
-  <a href="README.tr.md">Türkçe</a> |
-  <a href="README.uk.md">Українська</a> |
-  <a href="README.bn.md">বাংলা</a> |
-  <a href="README.gr.md">Ελληνικά</a> |
-  <a href="README.vi.md">Tiếng Việt</a>
+  <a href="README.fr.md">Français</a>
 </p>
 
-[![OpenCode Terminal UI](services/site/public/v1/docs/assets/lander/screenshot.png)](https://opencode.ai)
+[![Operon Exon Terminal UI](services/site/public/v1/docs/assets/lander/screenshot.png)](https://github.com/arkum-cloud/operon-exon)
 
 ---
 
 ### Installation
 
 ```bash
-# YOLO
-curl -fsSL https://opencode.ai/v2/install | bash
-
-# Gestionnaires de paquets
-npm i -g @opencode/cli@latest      # ou bun/pnpm/yarn
-brew install anomalyco/tap/opencode-v2 # macOS et Linux (recommandé, toujours à jour)
-brew install opencode              # macOS et Linux (formule officielle brew, mise à jour moins fréquente)
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-beta              # Arch Linux (Latest from AUR)
-mise use -g opencode               # n'importe quel OS
-nix run github:anomalyco/opencode  # Nix
+curl -fsSL https://raw.githubusercontent.com/arkum-cloud/operon-exon/dev/install | bash
 ```
 
-> [!TIP]
-> Supprimez les versions antérieures à 0.1.x avant d'installer.
+Le script installe le binaire CLI `exon` (avec les alias `operon-exon` et `opencode`) directement dans `$HOME/.opencode/bin`.
 
-### Application de bureau (BETA)
-
-OpenCode est aussi disponible en application de bureau. Téléchargez-la depuis [opencode.ai/download](https://opencode.ai/download).
-
-| Plateforme            | Téléchargement                     |
-| --------------------- | ---------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-mac-arm64.dmg`   |
-| macOS (Intel)         | `opencode-desktop-mac-x64.dmg`     |
-| Windows               | `opencode-desktop-win-x64.exe`     |
-| Linux                 | `.deb`, `.rpm`, ou AppImage        |
+### Utilisation
 
 ```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
+# Lancer le TUI
+exon
+
+# Ou via les alias
+operon-exon
+opencode
 ```
 
-#### Répertoire d'installation
+#### Mise à jour
 
-Le script d'installation installe OpenCode dans `$HOME/.opencode/bin`.
+Operon Exon intègre un système de mise à jour automatique vérifiant les releases de `arkum-cloud/operon-exon` :
+
+```bash
+exon update
+```
 
 ### Agents
 
-OpenCode inclut deux agents intégrés que vous pouvez basculer avec la touche `Tab`.
+Operon Exon inclut des agents intégrés que vous pouvez basculer avec la touche `Tab`.
 
-- **build** - Par défaut, agent avec accès complet pour le travail de développement
-- **plan** - Agent en lecture seule pour l'analyse et l'exploration du code
+- **build** - Agent par défaut avec accès complet pour le développement
+- **plan** - Agent en lecture seule pour l'analyse et l'exploration de code
   - Refuse les modifications de fichiers par défaut
-  - Demande l'autorisation avant d'exécuter des commandes bash
-  - Idéal pour explorer une base de code inconnue ou planifier des changements
+  - Demande confirmation avant d'exécuter des commandes bash
 
-Un sous-agent **general** est aussi inclus pour les recherches complexes et les tâches en plusieurs étapes.
-Il est utilisé en interne et peut être invoqué via `@general` dans les messages.
+Un sous-agent **general** est aussi inclus pour les recherches complexes et les tâches multi-étapes (`@general`).
 
-En savoir plus sur les [agents](https://opencode.ai/docs/agents).
+### Documentation & Upstream
 
-### Documentation
-
-Pour plus d'informations sur la configuration d'OpenCode, [**consultez notre documentation**](https://opencode.ai/docs).
-
-### Contribuer
-
-Si vous souhaitez contribuer à OpenCode, lisez nos [docs de contribution](./CONTRIBUTING.md) avant de soumettre une pull request.
-
-### Construire avec OpenCode
-
-Si vous travaillez sur un projet lié à OpenCode et que vous utilisez "opencode" dans le nom du projet (par exemple, "opencode-dashboard" ou "opencode-mobile"), ajoutez une note dans votre README pour préciser qu'il n'est pas construit par l'équipe OpenCode et qu'il n'est pas affilié à nous.
-
----
-
-**Rejoignez notre communauté** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+Operon Exon est basé sur [OpenCode](https://github.com/anomalyco/opencode).
+Pour la configuration générale et les workflows, consultez la [documentation upstream](https://opencode.ai/docs).

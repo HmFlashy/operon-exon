@@ -325,7 +325,7 @@ const make = Effect.gen(function* () {
     if (method === "curl" || !method) {
       const ghRelease = yield* Effect.tryPromise({
         try: async (signal) => {
-          const res = await fetch("https://api.github.com/repos/HmFlashy/operon-exon/releases/latest", {
+          const res = await fetch("https://api.github.com/repos/arkum-cloud/operon-exon/releases/latest", {
             signal: AbortSignal.any([signal, AbortSignal.timeout(6_000)]),
             headers: {
               "User-Agent": "Operon-Exon-Updater",
@@ -571,7 +571,7 @@ const make = Effect.gen(function* () {
           const directory = yield* temporaryDirectory("update-")
           const installer = path.join(directory, "install")
           const installerUrl =
-            "https://raw.githubusercontent.com/HmFlashy/operon-exon/dev/install"
+            "https://raw.githubusercontent.com/arkum-cloud/operon-exon/dev/install"
           yield* runUpgrade({
             method,
             command: ["curl", "-fsSL", "-o", installer, installerUrl],
