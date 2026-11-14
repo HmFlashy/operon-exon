@@ -240,7 +240,7 @@ const make = Effect.gen(function* () {
     process.platform === "win32" ? "opencode.exe" : "opencode",
   )
   const curlBinary = yield* fs.realPath(curlPath).pipe(
-    Effect.orElse(() => fs.realPath(legacyCurlPath)),
+    Effect.catch(() => fs.realPath(legacyCurlPath)),
     Effect.orElseSucceed(() => curlPath),
   )
 
