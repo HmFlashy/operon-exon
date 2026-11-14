@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { parseSessionMention, serializeSessionMention, sessionMentions } from "./session-mention.js"
+import { extractSessionId, parseSessionMention, serializeSessionMention, sessionMentions } from "./session-mention.js"
 
 const id = "ses_0123456789abcdefghijklmnop"
 
@@ -17,3 +17,27 @@ test.each(["ses_123", `@session:${id}extra`, `x${id}`, `${id}/path`, `https://ho
     expect(sessionMentions(text)).toEqual([])
   },
 )
+
+test("extractSessionId resolves session IDs from various formats and URLs", () => {
+  expect(extractSessionId(id)).toBe(id)
+  expect(extractSessionId(`@session:${id}`)).toBe(id)
+  expect(extractSessionId(`session:${id}`)).toBe(id)
+  expect(extractSessionId(`/session/${id}`)).toBe(id)
+  expect(extractSessionId(`/server/bWFpbg/session/${id}`)).toBe(id)
+  expect(extractSessionId(`https://opencode.example.com/session/${id}`)).toBe(id)
+  expect(extractSessionId(`https://opencode.example.com/server/xyz/session/${id}`)).toBe(id)
+  expect(extractSessionId(`https://opencode.example.com/session/${id}?tab=diff#overview`)).toBe(id)
+  expect(extractSessionId(`http://localhost:4096/session/${id}/`)).toBe(id)
+})
+
+test.each([
+  "ses_123",
+  `https://example.com/other/${id}`,
+  `https://example.com/session/${id}extra`,
+  `https://example.com/session/ses_123`,
+  "",
+  undefined,
+  null,
+])("extractSessionId returns undefined for invalid formats: %s", (text) => {
+  expect(extractSessionId(text as string)).toBeUndefined()
+})

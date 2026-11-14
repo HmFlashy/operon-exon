@@ -27,6 +27,7 @@ import {
   sessionReferenceText,
   setupSessionLinks,
 } from "../components/markdown-session-links"
+import { extractSessionId } from "@opencode/util/session-mention"
 import { useMarkdown } from "../context/markdown"
 import { useSources } from "../context/sources"
 import { SourcesChip } from "../sources/sources-chip"
@@ -828,6 +829,7 @@ function scrollParent(element: HTMLElement) {
 }
 
 function CurrentHighlightedText(props: { text: string; files: PromptAttachment[]; agents: PromptAgentAttachment[] }) {
+  const markdown = useMarkdown()
   const segments = createMemo(() => {
     const references = [
       ...props.files.flatMap((file) =>
@@ -882,9 +884,33 @@ function CurrentHighlightedText(props: { text: string; files: PromptAttachment[]
             </span>
           }
         >
-          <a data-slot="user-message-link" href={segment.text} target="_blank" rel="noopener noreferrer">
-            {segment.text}
-          </a>
+          {(() => {
+            const sessionId = extractSessionId(segment.text)
+            if (sessionId) {
+              return (
+                <a
+                  data-slot="user-message-link"
+                  data-session-id={sessionId}
+                  href={segment.text}
+                  onClick={(e) => {
+                    if (e.button !== 0 || e.defaultPrevented) return
+                    const handler = markdown?.openSession
+                    if (!handler) return
+                    e.preventDefault()
+                    e.stopPropagation()
+                    handler(sessionId)
+                  }}
+                >
+                  {segment.text}
+                </a>
+              )
+            }
+            return (
+              <a data-slot="user-message-link" href={segment.text} target="_blank" rel="noopener noreferrer">
+                {segment.text}
+              </a>
+            )
+          })()}
         </Show>
       )}
     </For>

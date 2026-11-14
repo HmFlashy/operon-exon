@@ -22,3 +22,19 @@ export function parseSessionMention(text: string): SessionMention | undefined {
 export function serializeSessionMention(mention: SessionMention) {
   return `@session:${mention.id}`
 }
+
+const sessionUrlPattern = /(?:^|[\/?#&])(?:session|sessionID)[=:\/](ses_[A-Za-z0-9]{26})(?:[\/?#&]|$)/i
+
+export function extractSessionId(value: string | null | undefined): SessionMention["id"] | undefined {
+  if (!value || typeof value !== "string") return undefined
+  const trimmed = value.trim()
+
+  const direct = parseSessionMention(trimmed)
+  if (direct) return direct.id
+
+  const match = trimmed.match(sessionUrlPattern)
+  if (match) return match[1] as SessionMention["id"]
+
+  return undefined
+}
+

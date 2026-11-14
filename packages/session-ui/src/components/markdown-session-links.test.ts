@@ -128,3 +128,34 @@ test("copied text writes each selected reference as its source instead of its ti
   expect(sessionReferenceClipboardText(root, [plain])).toBeUndefined()
   root.remove()
 })
+
+test("intercepts clicks on anchor tags pointing to a session", () => {
+  const root = document.createElement("div")
+  const opened: string[] = []
+  const dispose = setupSessionLinks(root, () => (id) => opened.push(id))
+
+  root.innerHTML = `<p><a href="/session/${first}" target="_blank" class="external-link">Session Link</a></p>`
+  markSessionLinks(root, title)
+
+  const anchor = root.querySelector("a")!
+  expect(anchor.dataset.sessionId).toBe(first)
+  expect(anchor.getAttribute("target")).toBeNull()
+  expect(anchor.classList.contains("external-link")).toBe(false)
+
+  const clickEvent = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 })
+  anchor.dispatchEvent(clickEvent)
+
+  expect(opened).toEqual([first])
+  expect(clickEvent.defaultPrevented).toBe(true)
+
+  // Non-session link should not be intercepted
+  const external = document.createElement("a")
+  external.href = "https://example.com/other"
+  root.append(external)
+  const externalClick = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 })
+  external.dispatchEvent(externalClick)
+  expect(opened).toEqual([first])
+  expect(externalClick.defaultPrevented).toBe(false)
+
+  dispose()
+})

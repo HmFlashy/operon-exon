@@ -1,4 +1,4 @@
-import { parseSessionMention, sessionMentions, type SessionMention } from "@opencode/util/session-mention"
+import { extractSessionId, parseSessionMention, sessionMentions, type SessionMention } from "@opencode/util/session-mention"
 
 export type SessionTitle = (id: string) => string | undefined
 
@@ -19,7 +19,7 @@ export function markSessionLinks(root: HTMLElement, title: SessionTitle) {
     element.replaceWith(sessionReference(mention, source, label))
   })
 
-  if (!root.textContent?.includes("ses_")) return
+  if (!root.innerHTML.includes("ses_")) return
 
   // The worker's escaped-raw fallback has no markdown elements; linking its text
   // would turn IDs inside still-unparsed fenced code into buttons.
@@ -47,6 +47,14 @@ export function markSessionLinks(root: HTMLElement, title: SessionTitle) {
 
   nodes.forEach((node) => {
     node.replaceWith(sessionReferenceText(node.data, title))
+  })
+
+  root.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((anchor) => {
+    const sessionId = extractSessionId(anchor.getAttribute("href"))
+    if (!sessionId) return
+    anchor.dataset.sessionId = sessionId
+    anchor.removeAttribute("target")
+    anchor.classList.remove("external-link")
   })
 }
 
@@ -93,15 +101,19 @@ export function setupSessionLinks(
   menu?: () => SessionReferenceMenu | undefined,
 ) {
   const click = (event: MouseEvent) => {
-    if (event.defaultPrevented || !(event.target instanceof Element)) return
-    const button = event.target.closest("button[data-session-id]")
+    if (event.defaultPrevented || event.button !== 0 || !(event.target instanceof Element)) return
+    const target = event.target.closest<HTMLElement>("button[data-session-id], a")
 
-    if (!(button instanceof HTMLButtonElement) || !root.contains(button)) return
+    if (!target || !root.contains(target)) return
+    const sessionId = target.dataset.sessionId || extractSessionId(target.getAttribute("href"))
+
+    if (!sessionId) return
     const handler = open()
 
     if (!handler) return
+    event.preventDefault()
     event.stopPropagation()
-    handler(button.dataset.sessionId!)
+    handler(sessionId)
   }
 
   const contextMenu = (event: MouseEvent) => {
@@ -138,7 +150,7 @@ export function setupSessionLinks(
 
 function sessionReferenceTarget(root: HTMLElement, target: EventTarget | null) {
   if (!(target instanceof Element)) return
-  const reference = target.closest<HTMLElement>("[data-session-reference][data-session-id]")
+  const reference = target.closest<HTMLElement>("[data-session-id]")
 
   return reference && root.contains(reference) ? reference : undefined
 }

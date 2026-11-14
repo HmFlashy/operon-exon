@@ -125,6 +125,16 @@ export function SessionUIProvider(
 
     if (effect.type === "referenced.open") {
       data.session.remember(effect.session)
+      if (effect.session.parentID) {
+        const currentOrigin = untrack(origin)
+        const tab = currentOrigin.sessionID ? tabs.sessionTab(currentOrigin.server, currentOrigin.sessionID) : undefined
+        if (tab?.type === "session") {
+          tabs.rememberSessionRoute(tab, effect.session.id, effect.session.parentID)
+        }
+        navigate(sessionHref(effect.server, effect.session.id))
+        return
+      }
+
       tabs.select(tabs.addSessionTab({ server: effect.server, sessionId: effect.session.id }))
 
       return

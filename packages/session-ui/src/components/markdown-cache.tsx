@@ -1,4 +1,5 @@
 import { checksum } from "@opencode/util/encode"
+import { extractSessionId } from "@opencode/util/session-mention"
 import { parseSmallMarkdown } from "@opencode/ui/context/marked-base"
 import DOMPurify from "dompurify"
 import {
@@ -49,20 +50,34 @@ if (typeof window !== "undefined" && purifier.isSupported) {
     FORBID_TAGS: ["style"],
     FORBID_CONTENTS: ["style", "script"],
     ADD_TAGS: ["svg", "path"],
-    ADD_ATTR: ["d", "viewBox", "preserveAspectRatio", "xmlns", "target"],
+    ADD_ATTR: ["d", "viewBox", "preserveAspectRatio", "xmlns", "target", "data-session-id", "data-session-reference"],
   })
   purifier.addHook("beforeSanitizeAttributes", (node) => {
     if (node instanceof HTMLAnchorElement) {
       // Local file links never navigate the document; the host decides how to open them.
       node.removeAttribute("data-local-link")
-      const path = localLinkPath(node.getAttribute("href") ?? "")
+      const href = node.getAttribute("href") ?? ""
+      const path = localLinkPath(href)
 
-      if (!path) return
-      node.setAttribute("data-local-link", path)
-      node.setAttribute("role", "link")
-      node.setAttribute("tabindex", "0")
-      node.removeAttribute("href")
-      node.removeAttribute("target")
+      if (path) {
+        node.setAttribute("data-local-link", path)
+        node.setAttribute("role", "link")
+        node.setAttribute("tabindex", "0")
+        node.removeAttribute("href")
+        node.removeAttribute("target")
+
+        return
+      }
+
+      const sessionId = extractSessionId(href)
+      if (sessionId) {
+        node.setAttribute("data-session-id", sessionId)
+        node.setAttribute("data-session-reference", href)
+        node.removeAttribute("target")
+        node.classList.remove("external-link")
+
+        return
+      }
 
       return
     }
