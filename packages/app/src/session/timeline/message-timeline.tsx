@@ -35,7 +35,6 @@ import {
   SessionLocation,
   SessionTitleHeader,
 } from "../session-identity-header"
-import { SessionHeaderSpacer } from "@/session/header/session-header"
 import { PanelLauncher } from "@/runtime/plugin/panel-launcher"
 import { SessionHeaderGap } from "@/session/header/drag-area"
 import { SessionWorkingIndicator } from "@/session/header/session-working-indicator"
@@ -91,7 +90,6 @@ type MessageTimelineProps = {
   onSelectionInteraction: (event: MouseEvent) => void
   pinned: boolean
   centered: boolean
-  reserveReviewToggle: boolean
   onContentResize: () => void
   bottomInset?: number
   setVisibleRef?: (el: HTMLDivElement | undefined) => void
@@ -572,7 +570,6 @@ function MessageTimelineView(
                         }}
                       />
                       <PanelLauncher compact={fit.compact} />
-                      <SessionHeaderSpacer visible={props.reserveReviewToggle} />
                     </>
                   )}
                 </Show>

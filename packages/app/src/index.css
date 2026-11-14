@@ -84,12 +84,6 @@
 }
 
 @layer components {
-  [data-slot="session-chat-panel"][data-scrollbar-hidden="true"]
-    [data-slot="session-timeline-visible"]
-    .scroll-view__thumb {
-    visibility: hidden;
-  }
-
   /* The timeline scrolls on under the composer region, passing behind its floating pill, and fades out as it reaches
      the region's opaque card. A mask fades the content itself, so the edge works over any theme's background;
      smoothstep stops avoid a visible horizon. */

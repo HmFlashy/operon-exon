@@ -88,7 +88,7 @@ export function SideRegion(props: {
   guardClosingFocus({
     root,
     closing: () => !tabsOpen() && tabsVisible(),
-    target: () => document.querySelector<HTMLElement>('[data-slot="session-review-toggle"] button') ?? undefined,
+    target: () => document.querySelector<HTMLElement>('[data-slot="session-panel-launcher"] button') ?? undefined,
   })
 
   return (
