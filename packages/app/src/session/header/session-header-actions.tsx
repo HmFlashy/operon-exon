@@ -3,31 +3,9 @@ import { Icon } from "@opencode/ui/icon"
 import { IconButton } from "@opencode/ui/icon-button"
 import { Keybind } from "@opencode/ui/keybind"
 import { Tooltip } from "@opencode/ui/tooltip"
-import { useCommand } from "@/shell/commands/command"
-import { useLanguage } from "@/runtime/i18n/language"
-import { useSessionLayout } from "@/session/session-layout"
 
 /** The review toggle's pane fill, scaled from the panel's edge to `open` of its width. */
 export const reviewGlyphFill = (open: number) => `matrix(${open} 0 0 1 ${2.917 * (1 - open)} 0)`
-
-export function SessionReviewToggle(props: { onToggle: () => void; glyph?: (fill: SVGPathElement) => void }) {
-  const command = useCommand()
-  const language = useLanguage()
-  const { view } = useSessionLayout()
-
-  return (
-    <SessionHeaderActions
-      state={{
-        reviewLabel: language.t("command.review.toggle"),
-        reviewKeybind: command.keybindParts("review.toggle"),
-        reviewVisible: true,
-        reviewOpened: view().side.opened(),
-        onReviewToggle: props.onToggle,
-        reviewGlyph: props.glyph,
-      }}
-    />
-  )
-}
 
 export type SessionHeaderActionsState = {
   reviewLabel: string

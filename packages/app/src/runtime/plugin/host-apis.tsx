@@ -50,7 +50,14 @@ import { openNotificationSession } from "@/shell/notifications/notification"
 import { playSoundById } from "@/shell/notifications/sound"
 import { showToast } from "@/shell/notifications/toast"
 import { useCurrentRoute, useLayout } from "@/shell/state/layout"
-import { sessionPaneTab, sessionTabPane, type SessionPane } from "@/shell/state/session-tabs"
+import {
+  opensBeside,
+  paneLeaves,
+  sessionPaneLayout,
+  sessionPaneTab,
+  sessionTabPane,
+  type SessionPane,
+} from "@/shell/state/session-tabs"
 import { terminalFontFamily, useSettings } from "@/settings/model"
 import { useSettingsSurface } from "@/settings/surface"
 import { formatKeybindParts, useCommand } from "@/shell/commands/command"
@@ -467,6 +474,9 @@ export function createHostApis() {
       hide: (key, session) => write((value) => value.layout.hide(key, session)),
       state: (key, session) => current()?.layout.state(key, session) ?? "closed",
       stored: (session) => current()?.layout.stored(plugin, session) ?? [],
+      panes: (session) => current()?.layout.panes(session) ?? [],
+      place: (key, session, pane, options) => write((value) => value.layout.place(key, session, pane, options)),
+      split: (key, session, options) => write((value) => value.layout.split(key, session, options)),
       side: {
         opened: (session) => current()?.layout.side.opened(session) ?? false,
         toggle: (session) => write((value) => value.layout.side.toggle(session)),
@@ -846,7 +856,7 @@ export function createPluginAttachment(apis: HostApis) {
     const wasOpen = sideOpened(session)
 
     batch(() => {
-      place(key, session, value, options)
+      open(key, session, options)
       dispatchSide({
         type: "panel.opened",
         session: session.key,
@@ -859,18 +869,48 @@ export function createPluginAttachment(apis: HostApis) {
     })
   }
 
-  const place = (key: string, session: SessionRef, value: string, options: OpenOptions | undefined) => {
+  const open = (key: string, session: SessionRef, options?: OpenOptions) => {
     const item = provider(key)
+
+    const value = stateKey(session)
+    if (!value) return located.hold(session, () => open(key, session, options))
+
     const placement = options?.tab ?? "open"
 
+    // Decided before any write, while the strip still shows whether the tab is new to it.
+    const beside =
+      !options?.pane &&
+      !options?.split &&
+      placement !== "append" &&
+      placement !== "preview" &&
+      !narrow() &&
+      !layout.panel.targeted(value) &&
+      opensBeside(layout.panel.state(value), key)
+
+    const applyPlacement = () => {
+      if (options?.split) return split(key, session, { direction: options.split, pane: options.pane })
+      if (options?.pane) return place(key, session, options.pane)
+
+      if (beside) split(key, session, { direction: "row", pane: sessionTabPane(layout.panel.state(value), key) })
+    }
+
     // An append adds the tab quietly: no selection, no region change, no preview replacement.
-    if (placement === "append") return layout.panel.append(value, key)
+    if (placement === "append")
+      return batch(() => {
+        const active = layout.panel.state(value).active
+
+        layout.panel.append(value, key)
+        applyPlacement()
+
+        if (active !== undefined && layout.panel.state(value).active !== active) layout.panel.focus(value, active)
+      })
 
     // A select keeps the narrow-screen view, as a background open does, and shows the tab's pane too.
     if (placement === "select")
       return batch(() => {
         layout.panel.append(value, key)
         layout.panel.focus(value, key)
+        applyPlacement()
         reveal(session, value, key)
       })
     // Lists the opened tab too, so its own fields apply before it is stored. The next preview replaces a transient tab.
@@ -890,13 +930,31 @@ export function createPluginAttachment(apis: HostApis) {
       else if (placement === "preview") layout.panel.preview(value, key, transient)
       else layout.panel.open(value, key, transient, first)
 
+      applyPlacement()
+
       // A background open keeps the narrow-screen view, but its tab still shows once the window is wide.
       if (!narrow() || options?.background) reveal(session, value, key)
     })
   }
 
-  const open = (key: string, session: SessionRef, options?: OpenOptions) =>
-    withLocated(session, (value) => openAt(key, session, value, options, "open"))
+  const place = (key: string, session: SessionRef, pane: string, options?: { before?: string }) => {
+    const value = stateKey(session)
+
+    if (!value) return located.hold(session, () => place(key, session, pane, options))
+    layout.panel.move(value, key, pane, options?.before)
+  }
+
+  const split = (key: string, session: SessionRef, options: { direction: "row" | "column"; pane?: string }) => {
+    const value = stateKey(session)
+
+    if (!value) return located.hold(session, () => split(key, session, options))
+    layout.panel.split(
+      value,
+      key,
+      options.pane ?? sessionTabPane(layout.panel.state(value), key),
+      options.direction,
+    )
+  }
 
   const closeAt = (key: string, session: SessionRef, value: string) => {
     const item = provider(key)
@@ -1195,6 +1253,25 @@ export function createPluginAttachment(apis: HostApis) {
         return layout.panel
           .state(value)
           .all.flatMap((key) => (key.startsWith(prefix) ? [key.slice(prefix.length)] : []))
+      },
+      panes(session) {
+        const value = stateKey(session)
+
+        if (!value) return []
+        const state = layout.panel.state(value)
+
+        return paneLeaves(sessionPaneLayout(state)).map((id) => {
+          const tabs = state.all.filter((key) => sessionTabPane(state, key) === id)
+          const shown = sessionPaneTab(state, id)
+
+          return { id, tabs, shown: shown !== undefined && tabs.includes(shown) ? shown : undefined }
+        })
+      },
+      place(key, session, pane, options) {
+        place(key, session, pane, options)
+      },
+      split(key, session, options) {
+        split(key, session, options)
       },
       side: {
         opened: sideOpened,

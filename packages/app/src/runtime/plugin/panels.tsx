@@ -5,9 +5,11 @@ import {
   createRenderEffect,
   createSignal,
   For,
+  getOwner,
   mergeProps,
   on,
   onCleanup,
+  runWithOwner,
   Show,
   untrack,
   type Accessor,
@@ -24,7 +26,14 @@ import type { PanelFrame, PanelSidebar, MountedSession, SessionScreen } from "@o
 import { BuiltinPanel, type BuiltinPanelTab } from "@opencode/plugin/gui/builtin"
 import { PanelContext } from "@opencode/plugin/gui/host"
 import { same } from "@/runtime/persistence/equality"
-import { sessionTabPane, type SessionPane, type SessionTabs } from "@/shell/state/session-tabs"
+import {
+  paneLeaves,
+  sessionPaneLayout,
+  sessionTabPane,
+  type PaneNode,
+  type SessionPane,
+  type SessionTabs,
+} from "@/shell/state/session-tabs"
 import { Persist, persisted } from "@/runtime/persistence/storage"
 import { Persistence } from "@/runtime/persistence/schema"
 import { usePluginHost } from "./host"
@@ -48,6 +57,8 @@ type Tabs = Accessor<{
   setActive(tab: string | undefined): void
   close(tab: string): void
   remap(rewrite: (tab: string) => string): void
+  layout(): PaneNode
+  ratio(split: string, value: number): void
   target(pane: SessionPane, plugin?: string, index?: number): void
 }>
 
@@ -220,17 +231,32 @@ export function createRegion(input: {
     ]
   })
 
-  // A pinned tab shows in the side pane. A listed tab the strip does not store, e.g. a terminal another session opened,
+  const layout = createMemo(() => sessionPaneLayout(input.tabs().tabs()))
+
+  // The first pane of the tree: where pinned tabs, the fallback selection and a new tab view go. It is `side` until
+  // `side` closes, then whichever pane comes first.
+  const firstPane = () => paneLeaves(layout())[0] ?? "side"
+
+  // A pane a stored tab names that the tree no longer has (a stale store) shows with the first pane instead of nowhere.
+  const known = (pane: SessionPane) => pane === "bottom" || paneLeaves(layout()).includes(pane)
+
+  // A pinned tab shows in the first pane. A listed tab the strip does not store, e.g. a terminal another session opened,
   // belongs with its plugin's last stored tab, so a grouped render stays in one pane.
   const paneOf = (entry: RegionEntry): SessionPane => {
     const tabs = input.tabs().tabs()
 
-    if (entry.tab.pinned) return "side"
+    if (entry.tab.pinned) return firstPane()
 
-    if (tabs.all.includes(entry.key)) return sessionTabPane(tabs, entry.key)
+    if (tabs.all.includes(entry.key)) {
+      const pane = sessionTabPane(tabs, entry.key)
+
+      return known(pane) ? pane : firstPane()
+    }
+
     const sibling = tabs.all.findLast((key) => key.startsWith(`${entry.plugin}:`))
+    const pane = sibling ? sessionTabPane(tabs, sibling) : firstPane()
 
-    return sibling ? sessionTabPane(tabs, sibling) : "side"
+    return known(pane) ? pane : firstPane()
   }
 
   const paneOfKey = (key: string) => {
@@ -248,7 +274,7 @@ export function createRegion(input: {
     if (value && strip().some((entry) => entry.key === value && (desktop() || !entry.tab.transient))) return value
 
     const eligible = strip().filter(
-      (entry) => paneOf(entry) === "side" && entry.tab.fallback && (desktop() || !entry.tab.transient),
+      (entry) => paneOf(entry) === firstPane() && entry.tab.fallback && (desktop() || !entry.tab.transient),
     )
 
     return [
@@ -288,7 +314,7 @@ export function createRegion(input: {
 
       if (shown && members.some((entry) => entry.key === shown && (desktop() || !entry.tab.transient))) return shown
 
-      if (pane !== "side") return members[0]?.key
+      if (pane !== firstPane()) return members[0]?.key
       const eligible = members.filter((entry) => entry.tab.fallback && (desktop() || !entry.tab.transient))
 
       return [
@@ -318,17 +344,33 @@ export function createRegion(input: {
     }
   }
 
-  const panes: Record<SessionPane, RegionPane> = {
-    side: createPane("side"),
-    split: createPane("split"),
-    bottom: createPane("bottom"),
+  // Panes come and go with the tree, so each id keeps one pane for the region's lifetime: a pane that reappears keeps the
+  // mounted panels of its tabs. A pane's memos belong to the region: made under whichever component asked first, they
+  // would be disposed with it and stop updating while the cache kept handing them out.
+  const owner = getOwner()
+  const byPane = new Map<SessionPane, RegionPane>()
+  const paneFor = (id: SessionPane): RegionPane => {
+    const known = byPane.get(id)
+
+    if (known) return known
+    const created = runWithOwner(owner, () => createPane(id))!
+
+    byPane.set(id, created)
+
+    return created
   }
 
   const activePane = createMemo(() => {
     const entry = byKey().get(active() ?? "")
 
-    return entry ? paneOf(entry) : "side"
+    return entry ? paneOf(entry) : firstPane()
   })
+
+  const panes: Record<SessionPane, RegionPane> = {
+    side: paneFor("side"),
+    split: paneFor("split"),
+    bottom: paneFor("bottom"),
+  }
 
   const empty = createMemo(() => strip().length === 0)
 
@@ -369,18 +411,19 @@ export function createRegion(input: {
         empty: empty(),
         regionActive: active(),
         sideOpen: sideOpen(),
-        panes: {
-          side: { active: panes.side.active(), keys: panes.side.keys() },
-          split: { active: panes.split.active(), keys: panes.split.keys() },
-          bottom: { active: panes.bottom.active(), keys: panes.bottom.keys() },
-        },
+        panes: Object.fromEntries(
+          [...new Set([...Object.keys(panes), ...paneLeaves(layout())])].map((id) => [
+            id,
+            { active: paneFor(id).active(), keys: paneFor(id).keys() },
+          ]),
+        ),
       },
     }),
   )
 
   const newTabs = (pane: SessionPane) => selectPaneNewTabs(newTabsState(), pane)
 
-  const shownNewTab = (pane: SessionPane) => selectShownNewTab(newTabsState(), pane, panes[pane].active())
+  const shownNewTab = (pane: SessionPane) => selectShownNewTab(newTabsState(), pane, paneFor(pane).active())
 
   // Closing the last New tab of a strip with no tabs closes the region, as closing its last tab does.
   const dismissNewTab = (id: string) => batch(() => dispatchNewTabs({ type: "dismiss", id, empty: untrack(empty) }))
@@ -390,7 +433,7 @@ export function createRegion(input: {
     focus: createSideFocus(),
     entries,
     /** The drawn strip of the pane that holds the selected tab, by key. */
-    keys: () => panes[activePane()].keys(),
+    keys: () => paneFor(activePane()).keys(),
     /** The strip holds no tab, hidden ones included. */
     empty,
     entry: (key: string) => byKey().get(key),
@@ -400,8 +443,18 @@ export function createRegion(input: {
 
       return key ? byKey().get(key) : undefined
     }),
-    pane: (pane: SessionPane) => panes[pane],
-    paneOf: paneOfKey,
+    pane: paneFor,
+    /** The side region's pane tree, bottom excluded. Reactive. */
+    layout,
+    /** The panes of the tree, in visual order. Reactive. */
+    panes: createMemo(() => paneLeaves(layout())),
+    /** Stores a split's ratio, e.g. from a drag on its handle. */
+    resize: (split: string, ratio: number) => input.tabs().ratio(split, ratio),
+    paneOf: (key: string): SessionPane => {
+      const entry = byKey().get(key)
+
+      return entry ? paneOf(entry) : sessionTabPane(input.tabs().tabs(), key)
+    },
     wide: createMemo(() => providers().some((item) => item.value.wide)),
     /** A plugin's tab ids in the stored strip. */
     openFor: (plugin: string) =>
@@ -474,7 +527,7 @@ export function createRegion(input: {
       const index = stored().indexOf(key)
 
       if (closed)
-        input.closed.push(input.view(), { ...closed, pane: paneOfKey(key), index: index === -1 ? undefined : index })
+        input.closed.push(input.view(), { ...closed, pane: paneOfKey(key) as "side" | "split" | "bottom", index: index === -1 ? undefined : index })
       // New tabs left in the strip keep the region open.
       batch(() => {
         input.tabs().close(key)

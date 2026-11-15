@@ -386,7 +386,6 @@ const setup: Plugin.Setup<typeof File> = (ctx) => {
         <span>{ctx.t("command.open")}</span>
       </div>
     ),
-    draggable: false,
     transient: true,
     group: GROUP,
     dom: { panel: TABPANEL },

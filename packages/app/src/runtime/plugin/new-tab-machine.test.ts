@@ -187,6 +187,24 @@ describe("new tab machine", () => {
     expect(last.emptied).toBe(0)
   })
 
+  test("a pane a split created keeps its own New tabs and drops them when it leaves the tree", () => {
+    const leaf = "split-1"
+    const base = snapshot({ side: { active: "a", keys: ["a"] }, regionActive: "a" })
+    const withLeaf: RegionTabSnapshot = { ...base, panes: { ...base.panes, [leaf]: { active: "b", keys: ["b"] } } }
+
+    const opened = run([{ type: "sync", snapshot: withLeaf }, { type: "open", pane: leaf }])
+
+    expect(selectPaneNewTabs(opened.state, leaf)).toEqual(["new:1"])
+    expect(selectShownNewTab(opened.state, leaf, "b")).toBe("new:1")
+    expect(selectShownNewTab(opened.state, "unknown", undefined)).toBeUndefined()
+    expect(selectHasNewTabs(opened.state)).toBe(true)
+
+    const closed = run([{ type: "sync", snapshot: base }], opened.state)
+
+    expect(selectPaneNewTabs(closed.state, leaf)).toEqual([])
+    expect(selectHasNewTabs(closed.state)).toBe(false)
+  })
+
   test("a sync that changes nothing returns the same state", () => {
     const region: Region = { side: { active: "a", keys: ["a"] }, regionActive: "a" }
     const state = run([sync(region)]).state

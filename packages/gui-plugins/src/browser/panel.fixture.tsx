@@ -982,6 +982,9 @@ export function mountBrowserRegion(input: RegionHost) {
       close: (key, session) => (session.key === view().key ? sideRegion()?.close(key) : close(session.key, key)),
       toggle() {},
       hide() {},
+      panes: () => [],
+      place() {},
+      split() {},
       state(key, session) {
         if (strip(session.key).active === key) return "visible"
 

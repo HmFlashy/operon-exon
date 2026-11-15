@@ -16,7 +16,8 @@ export type RegionTabSnapshot = {
   readonly regionActive: string | undefined
   /** The side region is open on screen, after the layout loaded. */
   readonly sideOpen: boolean
-  readonly panes: Readonly<Record<SessionPane, PaneTabSnapshot>>
+  /** Every pane of the tree, keyed by id; the three default panes are always present. */
+  readonly panes: Readonly<Record<string, PaneTabSnapshot>>
 }
 
 /** A pane's New tabs, in strip order, and the one it shows over its selected tab. */
@@ -35,7 +36,7 @@ export type NewTabsState = {
   readonly session: string
   /** The current session is in an open-and-empty span of the side region, which opened its New tab once. */
   readonly openedEmpty: boolean
-  readonly panes: Readonly<Record<SessionPane, PaneNewTabs>>
+  readonly panes: Readonly<Record<string, PaneNewTabs>>
   /** The region as the last `sync` saw it, which the next one compares against. */
   readonly snapshot: RegionTabSnapshot | undefined
 }
@@ -67,7 +68,7 @@ export function transitionNewTabs(state: NewTabsState, event: NewTabsEvent): New
   if (event.type === "open") return { state: open(state, event.pane), effects: [] }
 
   if (event.type === "select.new") {
-    const pane = state.panes[event.pane]
+    const pane = paneAt(state, event.pane)
 
     if (!pane.ids.includes(event.id) || pane.chosen === event.id) return { state, effects: [] }
 
@@ -75,14 +76,14 @@ export function transitionNewTabs(state: NewTabsState, event: NewTabsEvent): New
   }
 
   if (event.type === "select.tab") {
-    const pane = state.panes[event.pane]
+    const pane = paneAt(state, event.pane)
 
     if (pane.chosen === undefined) return { state, effects: [] }
 
     return { state: withPane(state, event.pane, { ids: pane.ids, chosen: undefined }), effects: [] }
   }
 
-  const owner = SESSION_PANES.find((pane) => state.panes[pane].ids.includes(event.id))
+  const owner = Object.keys(state.panes).find((pane) => state.panes[pane].ids.includes(event.id))
 
   if (!owner) return { state, effects: [] }
 
@@ -97,16 +98,16 @@ export function transitionNewTabs(state: NewTabsState, event: NewTabsEvent): New
 
 /** The New tabs a pane lists, in strip order. */
 export function selectPaneNewTabs(state: NewTabsState, pane: SessionPane) {
-  return state.panes[pane].ids
+  return paneAt(state, pane).ids
 }
 
 /** The New tab a pane shows: the chosen one, else the newest while the pane selects no tab. */
 export function selectShownNewTab(state: NewTabsState, pane: SessionPane, paneActive: string | undefined) {
-  return shown(state.panes[pane], paneActive)
+  return shown(paneAt(state, pane), paneActive)
 }
 
 export function selectHasNewTabs(state: NewTabsState) {
-  return SESSION_PANES.some((pane) => state.panes[pane].ids.length > 0)
+  return Object.values(state.panes).some((pane) => pane.ids.length > 0)
 }
 
 function sync(state: NewTabsState, snapshot: RegionTabSnapshot): NewTabsState {
@@ -119,18 +120,18 @@ function sync(state: NewTabsState, snapshot: RegionTabSnapshot): NewTabsState {
   }
 
   const previous = state.snapshot
-  const listed = new Set(SESSION_PANES.flatMap((pane) => snapshot.panes[pane].keys))
+  const listed = new Set(Object.values(snapshot.panes).flatMap((pane) => pane.keys))
 
   const syncPane = (pane: SessionPane): PaneNewTabs => {
-    const current = state.panes[pane]
-    const next = snapshot.panes[pane]
+    const current = paneAt(state, pane)
+    const next = tabsAt(snapshot, pane)
 
     // A split or bottom pane closes with its last tab, and its New tabs go with it.
     if (pane !== "side" && next.keys.length === 0)
       return current.ids.length === 0 ? current : { ids: [], chosen: undefined }
 
     if (!previous) return current
-    const before = previous.panes[pane]
+    const before = tabsAt(previous, pane)
     const replaced = shown(current, before.active)
 
     if (!replaced || !replacedBy(before, next, previous.regionActive, listed)) return current
@@ -138,8 +139,18 @@ function sync(state: NewTabsState, snapshot: RegionTabSnapshot): NewTabsState {
     return { ids: current.ids.filter((id) => id !== replaced), chosen: undefined }
   }
 
-  const panes = { side: syncPane("side"), split: syncPane("split"), bottom: syncPane("bottom") }
-  const changed = SESSION_PANES.some((pane) => panes[pane] !== state.panes[pane])
+  // A split creates panes under ids of its own. One that left the tree drops its entry with its New tabs.
+  const panes = Object.fromEntries(
+    [...new Set([...Object.keys(state.panes), ...Object.keys(snapshot.panes)])].flatMap((pane) => {
+      const value = syncPane(pane)
+
+      return SESSION_PANES.includes(pane) || value.ids.length > 0 ? [[pane, value] as const] : []
+    }),
+  )
+
+  const changed =
+    Object.keys(panes).length !== Object.keys(state.panes).length ||
+    Object.keys(panes).some((pane) => panes[pane] !== state.panes[pane])
 
   const synced: NewTabsState = {
     ...state,
@@ -188,7 +199,7 @@ function open(state: NewTabsState, pane: SessionPane): NewTabsState {
   const serial = state.serial + 1
   const id = `new:${serial}`
 
-  return { ...withPane(state, pane, { ids: [...state.panes[pane].ids, id], chosen: id }), serial }
+  return { ...withPane(state, pane, { ids: [...paneAt(state, pane).ids, id], chosen: id }), serial }
 }
 
 function shown(pane: PaneNewTabs, paneActive: string | undefined) {
@@ -199,12 +210,24 @@ function withPane(state: NewTabsState, pane: SessionPane, value: PaneNewTabs): N
   return { ...state, panes: { ...state.panes, [pane]: value } }
 }
 
-function emptyPanes(): Record<SessionPane, PaneNewTabs> {
+function emptyPanes(): Record<string, PaneNewTabs> {
   return {
     side: { ids: [], chosen: undefined },
     split: { ids: [], chosen: undefined },
     bottom: { ids: [], chosen: undefined },
   }
+}
+
+const NO_NEW_TABS: PaneNewTabs = { ids: [], chosen: undefined }
+const NO_TABS: PaneTabSnapshot = { active: undefined, keys: [] }
+
+/** A pane the machine has not seen has no New tabs; a split's pane exists only while the tree has it. */
+function paneAt(state: NewTabsState, pane: SessionPane) {
+  return state.panes[pane] ?? NO_NEW_TABS
+}
+
+function tabsAt(snapshot: RegionTabSnapshot, pane: SessionPane) {
+  return snapshot.panes[pane] ?? NO_TABS
 }
 
 function sameSnapshot(a: RegionTabSnapshot, b: RegionTabSnapshot) {
@@ -213,11 +236,15 @@ function sameSnapshot(a: RegionTabSnapshot, b: RegionTabSnapshot) {
     a.empty === b.empty &&
     a.regionActive === b.regionActive &&
     a.sideOpen === b.sideOpen &&
-    SESSION_PANES.every(
-      (pane) =>
-        a.panes[pane].active === b.panes[pane].active &&
-        a.panes[pane].keys.length === b.panes[pane].keys.length &&
-        a.panes[pane].keys.every((key, index) => key === b.panes[pane].keys[index]),
-    )
+    [...new Set([...Object.keys(a.panes), ...Object.keys(b.panes)])].every((pane) => {
+      const left = tabsAt(a, pane)
+      const right = tabsAt(b, pane)
+
+      return (
+        left.active === right.active &&
+        left.keys.length === right.keys.length &&
+        left.keys.every((key, index) => key === right.keys[index])
+      )
+    })
   )
 }

@@ -16,12 +16,17 @@ import { SessionStateKey } from "@/runtime/server/scope"
 import { createSessionKeyReader, ensureSessionKey, pruneSessionKeys } from "./helpers"
 import { requireServerKey } from "@/shell/routes/session"
 import {
+  closeSessionPane,
   closeSessionTab,
   moveSessionTab,
   openSessionTab,
   paneTargetMatches,
   placeSessionTabs,
   previewSessionTab,
+  resizeSessionPane,
+  sessionPaneLayout,
+  splitSessionTab,
+  type PaneNode,
   type SessionPane,
   type SessionTabs,
   type SessionTabState,
@@ -113,17 +118,30 @@ export const useCurrentRoute = () => {
   return createMemo(() => currentRoute(location.pathname, location.search))
 }
 
+type PaneSchema = Schema.Codec<PaneNode, unknown>
+
+function paneNodeFields(): PaneSchema {
+  return Schema.Union([
+    Persistence.struct({ type: Schema.Literal("leaf"), id: Schema.String }),
+    Persistence.struct({
+      type: Schema.Literal("split"),
+      id: Schema.String,
+      direction: Schema.Literals(["row", "column"]),
+      ratio: Schema.Finite,
+      children: Schema.Tuple([paneNodeSchema, paneNodeSchema]),
+    }),
+  ])
+}
+
+const paneNodeSchema: PaneSchema = Schema.suspend(paneNodeFields)
+
 const sessionTabsSchema = Persistence.struct({
   all: Persistence.array(Schema.String),
   active: Persistence.optional(Schema.String),
-  panes: Persistence.optional(Persistence.record(Schema.Literals(["split", "bottom"]))),
-  selected: Persistence.optional(
-    Persistence.struct({
-      side: Persistence.optional(Schema.String),
-      split: Persistence.optional(Schema.String),
-      bottom: Persistence.optional(Schema.String),
-    }),
-  ),
+  panes: Persistence.optional(Persistence.record(Schema.String)),
+  selected: Persistence.optional(Persistence.record(Schema.String)),
+  layout: Persistence.optional(paneNodeSchema),
+  serial: Persistence.optional(Schema.Finite),
 })
 
 const closedTabSchema = Schema.Struct({
@@ -345,6 +363,8 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
             active: placed.active,
             panes: placed.panes,
             selected: placed.selected,
+            layout: placed.layout,
+            serial: placed.serial,
           })
 
           if (preview) setEphemeral("sessionTabPreview", session, preview.value)
@@ -371,6 +391,45 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
     })
 
     const applyTabs = (session: string, next: SessionTabState) => writeTabs(session, next.tabs, { value: next.preview })
+
+    /** Moves a stored tab into `pane` before the tab `before`, or to the pane's end, and selects it. */
+    const moveTab = (session: string, tab: string, pane: SessionPane, before?: string) => {
+      const current = store.sessionTabs[session]
+
+      if (!current?.all.includes(tab)) return
+      writeTabs(session, moveSessionTab(current, tab, pane, before))
+    }
+
+    /** Splits `pane` in `direction` and moves the stored tab into the new pane. */
+    const splitTab = (
+      session: string,
+      tab: string,
+      pane: SessionPane,
+      direction: "row" | "column",
+      options?: { before?: string; first?: boolean },
+    ) => {
+      const current = store.sessionTabs[session]
+
+      if (!current?.all.includes(tab)) return
+      writeTabs(session, splitSessionTab(current, tab, { pane, direction, ...options }))
+    }
+
+    const closeTabPane = (session: string, pane: SessionPane) => {
+      const current = store.sessionTabs[session]
+
+      if (!current) return
+      writeTabs(session, closeSessionPane(current, pane))
+    }
+
+    const resizeTab = (session: string, split: string, value: number) => {
+      const current = store.sessionTabs[session]
+
+      if (!current) return
+      writeTabs(session, resizeSessionPane(current, split, value))
+    }
+
+    /** Whether a pane's "+" menu asked the next new tab to open in that pane and the request is still live. */
+    const targeted = (session: string) => !!selectPaneTarget(intentState(), session)
 
     // Names of other session-scoped stores, e.g. plugin storage, so pruning drops them with the layout state.
     const [scoped, setScoped, , scopedReady] = persisted(
@@ -639,6 +698,10 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         focus(session: string, tab: string) {
           writeTabs(session, { ...(store.sessionTabs[session] ?? { all: [] }), active: tab })
         },
+        move: moveTab,
+        split: splitTab,
+        ratio: resizeTab,
+        targeted,
         close(session: string, tab: string) {
           const current = store.sessionTabs[session]
 
@@ -660,6 +723,8 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
               active: current?.active,
               panes: current?.panes ? { ...current.panes } : undefined,
               selected: current?.selected ? { ...current.selected } : undefined,
+              layout: current?.layout,
+              serial: current?.serial,
             })
             setEphemeral("sessionTabPreview", to, ephemeral.sessionTabPreview[from])
             scroll.drop([to])
@@ -682,8 +747,8 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         setClosed(session: string, entries: readonly ClosedSideTab[]) {
           used.set(session, Date.now())
 
-          if (store.sessionView[session]) return setStore("sessionView", session, "closed", [...entries])
-          setStore("sessionView", session, { scroll: {}, closed: [...entries] })
+          if (store.sessionView[session]) return setStore("sessionView", session, "closed", [...entries] as unknown as Schema.Schema.Type<typeof closedTabSchema>[])
+          setStore("sessionView", session, { scroll: {}, closed: [...entries] as unknown as Schema.Schema.Type<typeof closedTabSchema>[] })
           prune(selectActiveSessionKey(untrack(scopedState)) ?? session)
         },
         scroll(session: string, tab: string) {
@@ -761,18 +826,19 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
             if (!store.sessionTabs[session]) return
             applyTabs(session, closeSessionTab(tabState(session), tab))
           },
-          /** Moves a stored tab into `pane` before the tab `before`, or to the pane's end, and selects it. */
-          move(tab: string, pane: SessionPane, before?: string) {
-            const session = key()
-            const current = store.sessionTabs[session]
-
-            if (!current?.all.includes(tab)) return
-            writeTabs(session, moveSessionTab(current, tab, pane, before))
-          },
-          /**
-           * Opens the next new tab a pane's "+" menu creates in `pane`; with `plugin`, only that plugin's tab, and with
-           * `index`, at that position in the strip.
-           */
+          move: (tab: string, pane: SessionPane, before?: string) => moveTab(key(), tab, pane, before),
+          split: (
+            tab: string,
+            pane: SessionPane,
+            direction: "row" | "column",
+            options?: { before?: string; first?: boolean },
+          ) => splitTab(key(), tab, pane, direction, options),
+          /** Closes a pane of the tree that holds no tab; the sibling takes its room. */
+          closePane: (pane: SessionPane) => closeTabPane(key(), pane),
+          ratio: (split: string, value: number) => resizeTab(key(), split, value),
+          /** The side region's pane tree. Reactive. */
+          layout: createMemo(() => sessionPaneLayout(tabs())),
+          /** Opens the next new tab, e.g. one a pane's "+" menu creates, in `pane`. */
           target(pane: SessionPane, plugin?: string, index?: number) {
             dispatchIntent({ type: "pane.targeted", session: key(), pane, plugin, index })
           },

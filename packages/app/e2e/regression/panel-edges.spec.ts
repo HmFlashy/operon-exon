@@ -55,13 +55,14 @@ test("the content beside a panel follows the panel's edge on every frame of a to
     .locator("visible=true")
     .first()
 
-  const review = page.locator('[data-slot="session-review-toggle"] button')
+  const openSide = page.locator('[data-slot="session-panel-launcher"] button').first()
+  const closeSide = page.locator('#review-panel [aria-label="Close pane"]').first()
 
   const runs = [
     { toggle: sidebar, before: '[data-slot="vertical-tabs-mount"]', after: "main", gap: 0 },
     { toggle: sidebar, before: '[data-slot="vertical-tabs-mount"]', after: "main", gap: 0 },
-    { toggle: review, before: '[data-slot="session-chat-panel"]', after: "#review-panel", gap: 8 },
-    { toggle: review, before: '[data-slot="session-chat-panel"]', after: "#review-panel", gap: 8 },
+    { toggle: openSide, before: '[data-slot="session-chat-panel"]', after: "#review-panel", gap: 8 },
+    { toggle: closeSide, before: '[data-slot="session-chat-panel"]', after: "#review-panel", gap: 8 },
   ]
 
   for (const run of runs) {
