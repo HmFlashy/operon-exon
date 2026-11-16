@@ -934,6 +934,49 @@ story(
   },
 )
 
+story("window.left stacks every plugin's contributions by order, and one that throws leaves the others", async ({ page }) => {
+  const result = await page.evaluate(async (fixture) => {
+    const { mountPlugins, until, Slot } = await import(fixture)
+    const text = (value: string) => () => Object.assign(document.createElement("p"), { textContent: value })
+
+    const host = mountPlugins({
+      definitions: [
+        {
+          id: "first",
+          windowEntry: async () => ({
+            default: (ctx: Context) => {
+              ctx.add(Slot, { at: "window.left", order: 2, render: text("last") })
+              ctx.add(Slot, {
+                at: "window.left",
+                order: 1,
+                render: () => {
+                  throw new Error("broken contribution")
+                },
+              })
+            },
+          }),
+        },
+        {
+          id: "second",
+          windowEntry: async () => ({
+            default: (ctx: Context) => void ctx.add(Slot, { at: "window.left", order: -1, render: text("top") }),
+          }),
+        },
+      ],
+    })
+
+    await until(() => !!host.failure("first") && !!host.container.textContent?.includes("top"))
+    const column = [...(host.container.querySelector('[data-testid="window-left"]')?.children ?? [])].map(
+      (child) => child.textContent,
+    )
+    host.unmount()
+
+    return column
+  }, fixture)
+
+  expect(result).toEqual(["top", "last"])
+})
+
 story("a contribution that throws renders nothing and records the error; the others stay", async ({ page }) => {
   const result = await page.evaluate(async (fixture) => {
     const { mountPlugins, until, Slot } = await import(fixture)

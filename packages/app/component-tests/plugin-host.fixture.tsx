@@ -244,7 +244,8 @@ export function mountPluginHost() {
 /**
  * Mounts the real host over these definitions, before any session mounts, with the HostApis faked at their
  * boundary. Storage is the real persisted store of a desktop window whose reads wait until `release()`; `stored` seeds
- * it. Renders the `window.bottom` slot once the startup gate opens.
+ * it. Renders the `window.bottom` slot and, in `[data-testid="window-left"]`, the `window.left` slot once the startup
+ * gate opens.
  */
 export function mountPlugins(input: {
   definitions: readonly Entry[]
@@ -317,6 +318,9 @@ export function mountPlugins(input: {
           )}
         </Show>
         <PluginSlot at="window.bottom" input={{}} />
+        <div data-testid="window-left">
+          <PluginSlot at="window.left" input={{}} />
+        </div>
       </Show>
     )
   }

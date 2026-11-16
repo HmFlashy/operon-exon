@@ -127,6 +127,13 @@ export const clientSettings: Entry<SettingsRootTab>[] = [
   },
   {
     tab: "experimental",
+    label: "settings.experimental.row.windowLeft.title",
+    target: "settings-window-left",
+    description: "settings.experimental.row.windowLeft.description",
+    keywords: "left column plugin region panel persistent window",
+  },
+  {
+    tab: "experimental",
     label: "settings.experimental.row.newQuestionUI.title",
     target: "settings-new-question-ui",
     description: "settings.experimental.row.newQuestionUI.description",

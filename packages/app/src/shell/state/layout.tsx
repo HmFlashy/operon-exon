@@ -57,6 +57,9 @@ const DEFAULT_SESSION_WIDTH = 600
 
 const DEFAULT_DOCK_HEIGHT = 280
 
+/** The `window.left` column's width bounds, in pixels. */
+export const WINDOW_LEFT_WIDTH = { initial: 280, min: 200, max: 480 }
+
 export type LocalProject = Partial<Project> & { worktree: string }
 
 export type HomeProjectSelection = typeof layoutSchema.Type.home.selection
@@ -191,6 +194,8 @@ export const layoutSchema = Persistence.struct({
   session: Persistence.struct({ width: Schema.Finite }),
   // The side region's width per panel (`${plugin}:${panel id}`) that sizes itself, app-wide.
   panelWidths: Schema.optional(Persistence.record(Schema.Finite)),
+  // The `window.left` plugin column; absent until the user first opens or resizes it.
+  windowLeft: Schema.optional(Persistence.struct({ opened: Schema.Boolean, width: Schema.Finite })),
   mobileSidebar: Persistence.struct({ opened: Schema.Boolean }),
   sessionTabs: Persistence.record(Persistence.fallback(sessionTabsSchema, () => ({ all: [] }))),
   sessionView: Persistence.record(Persistence.fallback(sessionViewSchema, () => ({ scroll: {} }))),
@@ -629,6 +634,20 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
           }
 
           setStore("panelWidths", panel, width)
+        },
+      },
+      /** The `window.left` plugin column: closed until the user opens it. */
+      windowLeft: {
+        opened: createMemo(() => store.windowLeft?.opened ?? false),
+        width: createMemo(() => store.windowLeft?.width ?? WINDOW_LEFT_WIDTH.initial),
+        toggle() {
+          setStore("windowLeft", {
+            opened: !(store.windowLeft?.opened ?? false),
+            width: store.windowLeft?.width ?? WINDOW_LEFT_WIDTH.initial,
+          })
+        },
+        resize(width: number) {
+          setStore("windowLeft", { opened: store.windowLeft?.opened ?? false, width })
         },
       },
       mobileSidebar: {

@@ -51,6 +51,14 @@ describe("layout persistence", () => {
     ).toEqual(defaults)
   })
 
+  test("keeps the window.left column's state, and leaves it absent until the user touches it", () => {
+    expect(decode({}).windowLeft).toBeUndefined()
+    const stored = decode({ windowLeft: { opened: true, width: 320 } })
+    expect(stored.windowLeft).toEqual({ opened: true, width: 320 })
+    expect(decode(Schema.encodeSync(schema)(stored)).windowLeft).toEqual({ opened: true, width: 320 })
+    expect(decode({ windowLeft: { opened: "yes", width: 320 } })).toEqual(decode({}))
+  })
+
   test("migrates old sidebar and panel settings and writes current fields", () => {
     const value = decode({ sidebar: { workspaces: true }, review: {}, fileTree: { opened: true, width: 260 } })
     expect(value.sidebar).toEqual({ opened: false, width: 344, workspaces: {}, workspacesDefault: true })

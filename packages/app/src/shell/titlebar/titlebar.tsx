@@ -17,6 +17,7 @@ import { WindowsAppMenu } from "./windows-menu"
 import { createTitlebarHistory } from "./history"
 import { TitlebarTabStrip } from "@/shell/titlebar/tab-strip"
 import { macVerticalTrafficLights, SidebarToggle } from "@/shell/sidebar-toggle"
+import { WindowLeftToggle } from "@/shell/window-left-toggle"
 import { SidebarInbox } from "@/shell/titlebar/inbox"
 import { SidebarCustomized, type SidebarStripGrouping } from "@/shell/titlebar/sidebar-customized"
 import { SidebarOrganized } from "@/shell/titlebar/sidebar-organized"
@@ -589,6 +590,9 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                 <Show when={windows() && props.verticalTabs}>
                   <SidebarToggle />
                 </Show>
+                <Show when={windows() || !props.verticalTabs}>
+                  <WindowLeftToggle />
+                </Show>
                 <Show when={!mobile() && !props.verticalTabs}>
                   {/* Pulls the first tab's avatar 10px from Search, past the row gap plus the tab's own inset. */}
                   <div class="-me-0.5 flex shrink-0 items-center gap-0.5">
@@ -794,6 +798,7 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                                 <Show when={homeInSidebarHeader()} fallback={<div class="flex-1" />}>
                                   <div class="min-w-0 flex-1">{homeButton(true)}</div>
                                 </Show>
+                                <WindowLeftToggle />
                                 <SidebarToggle handoff="out" />
                               </div>
                             </Show>

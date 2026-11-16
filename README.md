@@ -62,5 +62,9 @@ This is used internally and can be invoked using `@general` in messages.
 
 ### Documentation & Upstream
 
+Fork-specific notes live in `docs/`:
+
+- [`docs/window-left.md`](docs/window-left.md) — the experimental `window.left` plugin column.
+
 Operon Exon is built on top of [OpenCode](https://github.com/anomalyco/opencode).
 For general configuration, tools, and agent workflows, refer to the [upstream documentation](https://opencode.ai/docs).

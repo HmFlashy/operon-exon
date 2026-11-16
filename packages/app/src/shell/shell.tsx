@@ -27,6 +27,8 @@ import {
 import { createPanelMotion, guardClosingFocus, panelOpacity, setPanelResizing } from "@/shell/panel-motion"
 import { createSidebarPeek } from "@/shell/sidebar-peek"
 import { windowDragEnabled } from "@/session/header/drag-area"
+import { useLayout, WINDOW_LEFT_WIDTH } from "@/shell/state/layout"
+import { useWindowLeftAvailable } from "@/shell/window-left"
 
 type SidebarPose = { closed: number; peek: number | undefined }
 
@@ -43,6 +45,8 @@ export default function Layout(props: ParentProps) {
   const servers = useServers()
   const tabs = useTabs()
   const mobile = createMediaQuery("(max-width: 767px)")
+  const layout = useLayout()
+  const windowLeft = useWindowLeftAvailable()
 
   createTipToasts()
 
@@ -297,6 +301,34 @@ export default function Layout(props: ParentProps) {
                 onDraggingChange={setPanelResizing}
               />
             </Show>
+          </aside>
+        </Show>
+        {/* Experimental plugin column. Closed, it stays mounted but hidden, so contributions keep their state. */}
+        <Show when={windowLeft()}>
+          <aside
+            id="window-left"
+            data-slot="window-left"
+            data-state={layout.windowLeft.opened() ? "open" : "closed"}
+            hidden={!layout.windowLeft.opened()}
+            inert={!layout.windowLeft.opened()}
+            style={{ width: `${layout.windowLeft.width()}px` }}
+            class="relative z-10 h-full min-h-0 max-w-[50%] shrink-0"
+          >
+            <div
+              data-slot="window-left-content"
+              data-scrollable
+              class="flex h-full min-h-0 flex-col overflow-y-auto bg-v2-background-bg-deep ps-[var(--shell-inline-inset,8px)] pe-1 pb-[var(--shell-bottom-inset,8px)] pt-[var(--shell-top-inset,8px)]"
+            >
+              <PluginSlot at="window.left" input={{}} />
+            </div>
+            <ResizeHandle
+              direction="horizontal"
+              size={layout.windowLeft.width()}
+              min={WINDOW_LEFT_WIDTH.min}
+              max={WINDOW_LEFT_WIDTH.max}
+              onResize={layout.windowLeft.resize}
+              onDraggingChange={setPanelResizing}
+            />
           </aside>
         </Show>
         {/* Size containment collapses percentage-height descendants in WebKit. */}

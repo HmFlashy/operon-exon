@@ -889,6 +889,10 @@ export const dict = {
   "settings.experimental.row.newTimeline.title": "New timeline",
   "settings.experimental.row.newTimeline.description":
     "A redesigned session timeline that groups what the agent did, with one status line below the turn",
+  "settings.experimental.row.windowLeft.title": "Plugin column",
+  "settings.experimental.row.windowLeft.description":
+    "Show a column at the left of the window for plugins that contribute one, with a toggle in the titlebar",
+  "window.left.toggle": "Toggle plugin column",
   "settings.experimental.row.newQuestionUI.title": "New question UI",
   "settings.experimental.row.newQuestionUI.description": "Preview the keyboard-first question dock",
   "settings.experimental.row.sidebarOrganize.title": "Organize vertical sidebar",

@@ -863,6 +863,15 @@ export interface Theme {
 export interface SlotMap {
   /** Full-width strip under the window content, above toasts. */
   readonly "window.bottom": Record<string, never>
+  /**
+   * Experimental: may change without compatibility guarantees. A column at the window's start edge, beside the
+   * content and right of the vertical tabs sidebar, shown only while the `window_left` flag is on, at least one
+   * plugin contributes to it and the window is at least 768px wide. A toggle at the titlebar's start opens and
+   * closes it; the open state and the width (200 to 480px, 280 by default) persist. Contributions stack top to
+   * bottom, each sized by its content, and the column scrolls when they overflow. A closed column stays mounted but
+   * hidden, so a contribution keeps its own state across closing and reopening.
+   */
+  readonly "window.left": Record<string, never>
   /** The timeline title row. Cached timelines stay mounted while hidden; `active` is false then. */
   readonly "session.header": {
     /** The timeline's owning session screen; always present, also while the timeline is cached. */
