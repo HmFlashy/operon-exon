@@ -87,6 +87,7 @@ export const dict = {
   "command.review.toggle": "Toggle review",
   "command.sidebar.toggle": "Toggle sidebar",
   "command.sidebar.toggle.unread": "Toggle sidebar, unread sessions",
+  "command.window.left.toggle": "Toggle plugin column",
   "command.bottom.toggle": "Toggle bottom panel",
   "command.message.previous": "Previous message",
   "command.message.previous.description": "Go to the previous user message",
@@ -892,7 +893,6 @@ export const dict = {
   "settings.experimental.row.windowLeft.title": "Plugin column",
   "settings.experimental.row.windowLeft.description":
     "Show a column at the left of the window for plugins that contribute one, with a toggle in the titlebar",
-  "window.left.toggle": "Toggle plugin column",
   "settings.experimental.row.newQuestionUI.title": "New question UI",
   "settings.experimental.row.newQuestionUI.description": "Preview the keyboard-first question dock",
   "settings.experimental.row.sidebarOrganize.title": "Organize vertical sidebar",

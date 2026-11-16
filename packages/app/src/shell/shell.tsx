@@ -34,6 +34,8 @@ type SidebarPose = { closed: number; peek: number | undefined }
 
 export const sidebarToggleCommand = { id: "sidebar.toggle", keybind: "mod+shift+b" }
 
+export const windowLeftToggleCommand = { id: "window.left.toggle", keybind: "mod+shift+e" }
+
 export default function Layout(props: ParentProps) {
   const platform = usePlatform()
   const settings = useSettingsSurface()
@@ -166,6 +168,19 @@ export default function Layout(props: ParentProps) {
             title: language.t("command.sidebar.toggle"),
             category: language.t("command.category.view"),
             onSelect: toggleSidebar,
+          },
+        ]
+      : [],
+  )
+  // The column only exists while the switch is on and a plugin contributes, so its command does too.
+  command.register("window-left", () =>
+    windowLeft()
+      ? [
+          {
+            ...windowLeftToggleCommand,
+            title: language.t("command.window.left.toggle"),
+            category: language.t("command.category.view"),
+            onSelect: layout.windowLeft.toggle,
           },
         ]
       : [],

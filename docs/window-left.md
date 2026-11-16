@@ -1,7 +1,8 @@
 # `window.left` plugin column
 
 Status: experimental. Behind a local switch in Settings › Experimental, off by default. Not verified visually and not
-exercised end to end; only the slot stacking is covered by a component test.
+exercised end to end; only the slot stacking is covered by a component test. The command, its shortcut and its palette
+entry are registered like `sidebar.toggle`'s, and have no test of their own.
 
 `window.left` is a GUI plugin slot. Plugins that contribute to it fill a persistent column between the vertical tabs
 sidebar and `<main>`. The slot, the titlebar toggle and the column exist only while the switch is on and at least one
@@ -16,6 +17,7 @@ plugin contributes; otherwise none of them leaves DOM behind.
 | Availability rule                      | `packages/app/src/shell/window-left.ts` (`useWindowLeftAvailable`)                       |
 | Column                                 | `packages/app/src/shell/shell.tsx` (`<aside id="window-left">`, before `<main>`)         |
 | Toggle                                 | `packages/app/src/shell/window-left-toggle.tsx`, placed in `shell/titlebar/titlebar.tsx` |
+| Command, keybind and palette entry     | `packages/app/src/shell/shell.tsx` (`windowLeftToggleCommand`, `command.register`)        |
 | Open state and width                   | `packages/app/src/shell/state/layout.tsx` (`windowLeft`, `WINDOW_LEFT_WIDTH`)            |
 | Switch                                 | `packages/app/src/settings/model.tsx` (`general.windowLeft`), `settings/experimental/`   |
 | Stacking and error isolation (testing) | `packages/app/component-tests/plugin-host.spec.ts`                                       |
@@ -25,7 +27,8 @@ plugin contributes; otherwise none of them leaves DOM behind.
 1. Settings › Experimental › **Plugin column** (`data-action="settings-window-left"`). The setting key is
    `settings.general.windowLeft`, default `false`.
 2. Install or enable a plugin that does `ctx.add(Slot, { at: "window.left", render })`.
-3. Use the toggle (`layout-left` icon) in the titlebar.
+3. Use the toggle (`layout-left` icon) in the titlebar, `mod+shift+e`, or the "Toggle plugin column" command in the
+   palette (View category).
 
 There is no `window_left` key in `packages/schema/src/config/flag.ts`. Feature flags are read by Core only, and no
 flag state reaches the client, so a server flag would have nothing on the app side to read it. If that changes, wire it
@@ -78,7 +81,8 @@ inside `useWindowLeftAvailable`, the single place that decides availability.
   server flags: it is off everywhere until the user turns it on.
 - The column width adds to `tabsWidth` (up to 640px with vertical tabs). On a narrow desktop window both can squeeze
   `<main>`.
-- No keyboard shortcut and no command palette entry for the toggle.
+- The shortcut (`mod+shift+e`) and the palette entry exist only while the column does: turn the switch on and have a
+  plugin contribute, or the command is not registered at all.
 - The width is written to the layout store on every resize-handle move, as `session.resize` does.
 - A plugin cannot open or close the column, nor read its state.
 - Not verified visually, on macOS, or with vertical tabs on a real desktop window. Only the stacking and error
