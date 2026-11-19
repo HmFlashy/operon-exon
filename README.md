@@ -65,6 +65,7 @@ This is used internally and can be invoked using `@general` in messages.
 Fork-specific notes live in `docs/`:
 
 - [`docs/window-left.md`](docs/window-left.md) — the experimental `window.left` plugin column.
+- [`docs/exon-upgrade.md`](docs/exon-upgrade.md) — how `exon upgrade` resolves a version (GitHub release vs npm).
 
 Operon Exon is built on top of [OpenCode](https://github.com/anomalyco/opencode).
 For general configuration, tools, and agent workflows, refer to the [upstream documentation](https://opencode.ai/docs).
