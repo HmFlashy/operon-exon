@@ -185,11 +185,17 @@ else
     else
         requested_version="${requested_version#v}"
         specific_version="v${requested_version}"
-        tag_status=$(curl -s -o /dev/null -w "%{http_code}" -H "User-Agent: Operon-Exon-Installer" "https://api.github.com/repos/${FORGE_REPO}/releases/tags/${specific_version}" || true)
-        if [ "$tag_status" = "200" ]; then
+        # Exon builds are only published as GitHub releases, never to npm. Skip the API preflight so a rate limit or
+        # network blip cannot silently route them to the npm fallback.
+        if [[ "$requested_version" == *-exon.* ]]; then
             use_github_release=true
         else
-            specific_version="${requested_version}"
+            tag_status=$(curl -s -o /dev/null -w "%{http_code}" -H "User-Agent: Operon-Exon-Installer" "https://api.github.com/repos/${FORGE_REPO}/releases/tags/${specific_version}" || true)
+            if [ "$tag_status" = "200" ]; then
+                use_github_release=true
+            else
+                specific_version="${requested_version}"
+            fi
         fi
     fi
 
@@ -342,6 +348,9 @@ download_and_install() {
             print_message error "Could not write the download to $tmp_dir. Make sure it has enough free space, or set TMPDIR to another directory, then try again." >&2
         fi
         if [ "$ret" -ne 0 ]; then
+            if [ "$use_github_release" = "true" ] && [ "$ret" -ne 23 ]; then
+                print_message error "Error: Could not download Exon ${specific_version} for ${target} from ${url} (curl exit ${ret}). Check that the release and its ${filename} asset exist." >&2
+            fi
             exit "$ret"
         fi
     fi
