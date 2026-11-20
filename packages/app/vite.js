@@ -3,6 +3,7 @@ import { createRequire } from "node:module"
 import solidPlugin from "vite-plugin-solid"
 import tailwindcss from "@tailwindcss/vite"
 import { fileURLToPath } from "url"
+import { loadBrandConfig, brandingPlugin } from "./vite.branding.ts"
 
 const theme = fileURLToPath(new URL("./public/oc-theme-preload.js", import.meta.url))
 
@@ -123,6 +124,7 @@ export default [
     },
   },
   dropUnloadedOfficeFiles,
+  brandingPlugin(),
   {
     name: "opencode-desktop:theme-preload",
     transformIndexHtml: {
@@ -135,8 +137,18 @@ export default [
 ]
 
 export function inlineThemePreload(html) {
+  const brand = loadBrandConfig()
+  // When a custom brand default theme is configured, inject a tiny window assignment
+  // *before* the preload script so it can read window.__BRAND_DEFAULT_THEME__ at runtime.
+  // This keeps oc-theme-preload.js unmodified so its unit tests (which eval the raw file)
+  // keep expecting "oc-2" as the hardcoded JS fallback.
+  const preamble =
+    brand.isCustom && brand.defaultTheme !== "oc-2"
+      ? `window.__BRAND_DEFAULT_THEME__=${JSON.stringify(brand.defaultTheme)};`
+      : ""
+
   return html.replace(
     /<script id="oc-theme-preload-script" src="(?:\.\/|\/)oc-theme-preload\.js"><\/script>/,
-    `<script id="oc-theme-preload-script">${themeScript}</script>`,
+    `<script id="oc-theme-preload-script">${preamble}${themeScript}</script>`,
   )
 }

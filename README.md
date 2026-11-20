@@ -65,6 +65,8 @@ This is used internally and can be invoked using `@general` in messages.
 Fork-specific notes live in `docs/`:
 
 - [`docs/window-left.md`](docs/window-left.md) — the experimental `window.left` plugin column.
+- [`docs/white-label-injection.md`](docs/white-label-injection.md) — opt-in build-time brand injection (product name, logos, favicons, theme, links) for Arkum-hosted frontends.
+- [`docs/brand-bundle-rollout.md`](docs/brand-bundle-rollout.md) — versioned brand bundles: build, publish, Prism push, Ray install, CLI hot reload.
 
 Operon Exon is built on top of [OpenCode](https://github.com/anomalyco/opencode).
 For general configuration, tools, and agent workflows, refer to the [upstream documentation](https://opencode.ai/docs).

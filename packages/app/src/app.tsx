@@ -57,9 +57,9 @@ export function AppBaseProviders(
 ) {
   return (
     <MetaProvider>
-      <Title>Operon Exon</Title>
+      <Title>{import.meta.env.VITE_PRODUCT_NAME || "Operon Exon"}</Title>
       <Font />
-      <ThemeProvider defaultTheme="operon" onThemeApplied={(mode, scheme) => props.onThemeApplied?.(mode, scheme)}>
+      <ThemeProvider defaultTheme={(import.meta.env.VITE_DEFAULT_THEME as string) || "operon"} onThemeApplied={(mode, scheme) => props.onThemeApplied?.(mode, scheme)}>
         <LanguageProvider locale={props.locale} onNativeTranslations={props.onNativeTranslations}>
           <UiI18nBridge>
             <ErrorBoundary

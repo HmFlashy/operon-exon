@@ -1,4 +1,5 @@
 import { Option, Schema } from "effect"
+import path from "node:path"
 
 declare const OPENCODE_VERSION: string
 declare const OPENCODE_CHANNEL: string
@@ -26,3 +27,13 @@ export {
   highlights as OPENCODE_HIGHLIGHTS,
 }
 export const OPENCODE_LOCAL = channel === "local"
+
+/**
+ * Optional directory of prebuilt web assets served instead of the embedded Brotli archive.
+ * Prism sets this at provisioning to mount a tenant-branded frontend without recompiling the CLI.
+ * The value is read at runtime (not a build define) so one binary works for every tenant.
+ */
+export const OPENCODE_WEB_ASSETS_DIR: string | undefined = (() => {
+  const value = process.env.OPENCODE_WEB_ASSETS_DIR?.trim()
+  return value ? path.resolve(value) : undefined
+})()

@@ -1,3 +1,11 @@
+## Arkum White-Label Fork
+
+- Brand skinning is opt-in and happens at Vite build time; no brand env vars means an unchanged upstream build. Read `docs/white-label-injection.md` before touching `vite.branding.ts`, `vite.icons.ts`, or the theme preload.
+- Never edit emitted HTML after Vite: Workbox integrity hashes and the CLI's CSP inline-script hash depend on it. Inject during `transformIndexHtml` instead.
+- The CLI only serves the directory named by `OPENCODE_WEB_ASSETS_DIR` (a `current` symlink) and hot-reloads on the `VERSION` marker directly inside it. Registry access, tarballs and tokens belong to Ray in the `arkum` monorepo, not here. Read `docs/brand-bundle-rollout.md` for the full chain.
+- Build a publishable bundle with `bun script/build-brand-bundle.ts --dist <dir> --out <dir> --version <tag>`; each tag needs `bundle.tar.gz` and `bundle.tar.gz.sha256`.
+- Run focused tests from the package directory, e.g. `cd packages/app && bun test ./vite.branding.test.ts ./vite.icons.test.ts`. The worktree's `node_modules` is symlinked from the main checkout, so a fresh `packages/app` build can hit a Workbox empty-`dist/` error; build from the real checkout when that happens.
+
 - After changing the public Protocol or Server `HttpApi`, run `bun run generate` from `packages/client`. Do not edit generated client files directly.
 - Keep runtime dependencies directed from Schema to Core and Protocol, then from Core and Protocol to Server. Client runtime code may depend on Schema and Protocol but never Core or Server; `sdk` composes Client, Core, and Server.
 - This repository does not use Changesets. Do not add `.changeset` files; follow the existing release workflow instead.

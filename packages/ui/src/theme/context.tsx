@@ -67,6 +67,7 @@ const names = new Map(
   Object.entries({
     "oc-2": "OpenCode",
     operon: "Operon",
+    arkum: "Arkum Kinetic",
     amoled: "AMOLED",
     aura: "Aura",
     ayu: "Ayu",
